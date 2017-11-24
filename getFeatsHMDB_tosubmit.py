@@ -13,8 +13,9 @@ import os.path
 from skimage import data, color, exposure
 import sys
 
-# Find video dimensions to extract frames using ffmprobe
 def get_framedims(video):
+    """Find video dimensions to extract frames using ffmprobe
+    """
     print(video)
     FFMPROBE_BIN = "ffprobe" 
     command = [ FFMPROBE_BIN,
@@ -31,8 +32,9 @@ def get_framedims(video):
     pipe.stdout.flush()
     return height, width
 
-# Open video using ffmpeg
 def get_video(video):
+    """ Open video using ffmpeg
+    """
     FFMPEG_BIN = "ffmpeg" # on Linux ans Mac OS
     command = [ FFMPEG_BIN,
             '-i', video,
@@ -42,8 +44,9 @@ def get_video(video):
     pipe = sp.Popen(command, stdout = sp.PIPE, bufsize=10**8)
     return pipe
 
-# Given video dimensions, read video frames and return as array
 def read_frames(pipe, height, width):
+    """Given video dimensions, read video frames and return as array
+    """
     raw_image = pipe.stdout.read(height*width*3)
     # transform the byte read into a numpy array
     image1 =  np.fromstring(raw_image, dtype='uint8')
@@ -55,14 +58,18 @@ def read_frames(pipe, height, width):
     return True, image1
 
 
-# Function to set up and train LSTM
-def main():
+def get_features(folder):
+    """Function to set up and extract features using Inception
+    
+    Parameters
+    ----------
+    folder : str
+        absolute path in which to get the date and save the features
+    """
     a = int(sys.argv[1])
     b = int(sys.argv[2])
-    fnames =  glob.glob("/vol/aesop/homes/sv212/hmdb_51/hmdb51_video/*")
-    dir_csv = "/vol/aesop/homes/sv212/hmdb_51/hmdb51_csv/"
-    # fnames = glob.glob("/export/vol/hsd/svdata/THETIS/VIDEO_RGB/*")
-	# dir_csv = "/export/vol/hsd/svdata/THETIS/THETIS_hog/"
+    fnames = glob.glob(folder + "/THETIS/VIDEO_RGB/*")
+    dir_csv = folder + "/THETIS/THETIS_hog/"
     for i in fnames[a:b]:
         vnames = glob.glob(i + "/*.avi")
         for v in vnames:
@@ -79,10 +86,11 @@ def main():
                val = True
                imList = []
                while(val==True):
-				   # read frames
+		    # read frames
                     val, im = read_frames(p, h, w)
                     if(val==True):
                         imList.append(im)
+
                # Run inference from tensorflow code to get inception features
                one = classify_image.run_inference_on_frame(imList)
                myfile = open(csv_path, "w")
@@ -94,5 +102,5 @@ def main():
                     wr.writerow(j)
 
 if __name__ == '__main__':
-    main()
+    get_features()
 

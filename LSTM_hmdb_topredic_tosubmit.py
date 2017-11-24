@@ -8,9 +8,10 @@ import csv
 
 # IN this file, X refers to data and y to labels 
 
-# Initialize network variables, will be updated later in learnExternalData
-# and predictExternalData
 class init_vars:
+    """ Initialize network variables, will be updated later in learnExternalData
+        and predictExternalData
+    """
     ts = time.time()
     st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d_%H:%M:%S')
     n_hidden = 32 
@@ -23,9 +24,11 @@ class init_vars:
     test_num = 72
     valid_num = " "
 
-# Write variables to file
-def write_vars(values):
-    file = open("/homes/sv212/LSTM-Human-Activity-Recognition-master/plots/" + str(values.st) + "net.txt", "w")
+def write_vars(values, folder):
+    """Write variables to file
+    """
+    savefile = os.path.join(folder, str(values.st) + "net.txt")
+    file = open(savefile, "w")
     file.write("n_hidden " + str(values.n_hidden) + "\n")
     file.write("n_classes " + str(values.n_classes) + "\n")
     file.write("learning_rate " + str(values.learning_rate) + "\n")
@@ -37,9 +40,9 @@ def write_vars(values):
     file.write("valid_num " + values.valid_num + "\n")
     file.close() 
 
-# Function to define the strucure of the network
 def LSTM_RNN(_X, _weights, _biases, _n_hidden, n_input, n_steps):
-
+    """Function to define the strucure of the network
+    """
     # Reshape to prepare input to hidden activation 
     # Input shape: (batch_size, n_steps, n_input)
     _X = tf.transpose(_X, [1, 0, 2])  # permute n_steps and batch_size
@@ -63,8 +66,9 @@ def LSTM_RNN(_X, _weights, _biases, _n_hidden, n_input, n_steps):
     # Linear activation
     return tf.matmul(outputs[-1], _weights['out']) + _biases['out']
 
-# Function to fetch a batch of data from "_train" of size "batch_size"
 def extract_batch_size(_train, step, batch_size, arr): 
+    """Function to fetch a batch of data from "_train" of size "batch_size"
+    """
     shape = list(_train.shape)
     shape[0] = batch_size
     batch_s = np.empty(shape)
@@ -74,14 +78,16 @@ def extract_batch_size(_train, step, batch_size, arr):
 
     return batch_s
 
-# Function to convert single labels to matrix form
 def one_hot(y_, n_values):
+    """Function to convert single labels to matrix form
+    """
     y_ = y_.reshape(len(y_))
     return np.eye(n_values)[np.array(y_, dtype=np.int32)]  
 
 
-# Function to calculate the cross entropy cost
 def calculate_cost(output, target):
+    """Function to calculate the cross entropy cost
+    """
     # Compute cross entropy for each frame.
     cross_entropy = -tf.reduce_sum(target*tf.log(tf.clip_by_value(output,1e-10,1.0)))
     #cross_entropy = target * tf.log(output)
@@ -94,8 +100,9 @@ def calculate_cost(output, target):
     return tf.reduce_mean(cross_entropy)
 
 
-# Function to set up and train LSTM (in this function, test refers to validation data)
-def setup_and_train_LSTM(var_, X_train, y_train, X_test, y_test, test_num, valid_ids, fname):
+def setup_and_train_LSTM(var_, X_train, y_train, X_test, y_test, test_num, valid_ids, fname, savefolder):
+    """Function to set up and train LSTM (in this function, test refers to validation data)
+    """
     tf.reset_default_graph()
     prev_acc = 0.000
     
@@ -140,7 +147,7 @@ def setup_and_train_LSTM(var_, X_train, y_train, X_test, y_test, test_num, valid
     correct_pred = tf.equal(tf.argmax(pred,1), tf.argmax(y,1))
     accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
  
-	# Initialize variables to store loss and accuracy
+    # Initialize variables to store loss and accuracy
     test_losses = []
     test_accuracies = []
     test_step = []
@@ -152,7 +159,7 @@ def setup_and_train_LSTM(var_, X_train, y_train, X_test, y_test, test_num, valid
     sess = tf.InteractiveSession(config=tf.ConfigProto(log_device_placement=True))
     init = tf.initialize_all_variables()
     sess.run(init)
-    train_writer = tf.train.SummaryWriter("/homes/sv212/LSTM-Human-Activity-Recognition-master/tensorboard/", sess.graph)
+    train_writer = tf.train.SummaryWriter(os.path.join(save_folder, 'tensorboard') , sess.graph)
     
     # Perform batch training 
     step = 1
@@ -197,7 +204,10 @@ def setup_and_train_LSTM(var_, X_train, y_train, X_test, y_test, test_num, valid
             if(np.float32(acc) > highest_acc):
                highest_acc = np.float32(acc)
                # Store session
-               saver.save(sess, "/vol/aesop/homes/sv212/thetis_models/models_" +  fname + "/model_" + fname + str(test_num) + "b" + str(batch_size) + "h" + str(n_hidden) + "v" + valid_ids + ".ckpt")
+                session_file = os.path.join(save_folder, 'models_' + fname,
+                                            'models_' + fname + str(test_num) + "b" + str(batch_size)\
+                                            + "h" + str(n_hidden) + "v" + valid_ids + ".ckpt")
+               saver.save(sess,  session_file)
                print("BEST ACC SO FAR: " + str(highest_acc))
             print ("PERFORMANCE ON TEST SET: " + "Batch Loss = {}".format(loss) + ", Accuracy = {}".format(acc))
             summary = tf.Summary(value=[tf.Summary.Value(tag="summary_tag", simple_value=np.float32(acc).item(acc)),])
@@ -225,8 +235,9 @@ def setup_and_train_LSTM(var_, X_train, y_train, X_test, y_test, test_num, valid
     print(test_step)
 	
 	
-# Function to make predictions on test data from pre-trained LSTM
-def predict(var_, X_train, X_test, y_test, model_name, model_num, fname):
+def predict(var_, X_train, X_test, y_test, model_name, model_num, fname, folder):
+    """Function to make predictions on test data from pre-trained LSTM
+    """
     tf.reset_default_graph()
     prev_acc = 0.000
     
@@ -293,8 +304,8 @@ def predict(var_, X_train, X_test, y_test, model_name, model_num, fname):
     print(loss)
     
     # Directory to save predictions
-    csv_path = "/homes/sv212/trainTHETIS/predictions_" + fname + "/predictions" + str(model_num) + ".csv"
-    csv_path2 = "/homes/sv212/trainTHETIS/predictions_" + fname + "/proba" + str(model_num) + ".csv"
+    csv_path = os.path.join(folder, "predictions_" + fname, "predictions" + str(model_num) + ".csv")
+    csv_path2 = os.path.join(folder, "predictions_" + fname, "proba" + str(model_num) + ".csv")
     
     myfile = open(csv_path, "w") 
     wr = csv.writer(myfile)
@@ -308,45 +319,41 @@ def predict(var_, X_train, X_test, y_test, model_name, model_num, fname):
         dat2 = np.append(dat2,pred[j])
         wr2.writerow(dat2)
         
-# Save file with hypreparameters and launch learning
 def learnExternalData(classesnum, X_train, y_train, X_valid, y_valid, valid_num, valid_ids, fname):
-	max_feats = 2048
-	max_time = 20	
-		
-	v = init_vars
-	v.n_hidden = 90
-	v.learning_rate = 0.001
-	v.lambda_loss_amount = 0.003
-	v.batch_size = 50
-	v.its = 350 
-	ts = time.time()
-	v.n_classes = classesnum
-	v.st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d_%H:%M:%S')	
-	v.test_num = valid_num
-	v.valid_num = valid_ids
-	write_vars(v)
-	# Start Learning (learned model will be save in learnExternalData)
-	setup_and_train_LSTM(v, X_train, y_train, X_valid, y_valid, valid_num, valid_ids, fname)
+    """Save file with hypreparameters and launch learning
+    """
+    max_feats = 2048
+    max_time = 20	
+            
+    v = init_vars
+    v.n_hidden = 90
+    v.learning_rate = 0.001
+    v.lambda_loss_amount = 0.003
+    v.batch_size = 50
+    v.its = 350 
+    ts = time.time()
+    v.n_classes = classesnum
+    v.st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d_%H:%M:%S')	
+    v.test_num = valid_num
+    v.valid_num = valid_ids
+    write_vars(v)
+    # Start Learning (learned model will be save in learnExternalData)
+    setup_and_train_LSTM(v, X_train, y_train, X_valid, y_valid, valid_num, valid_ids, fname)
 
-# Select model and launch prediction
 def predictExternalData(classesnum, X_train, X_test, y_test, model_name, model_num, batch_s, hidden_s, lr, fname):
-	max_feats = 2048
-	max_time = 20			
-	v = init_vars
-	v.n_hidden = 90
-	v.learning_rate = 0.001
-	v.lambda_loss_amount = 0.003
-	v.batch_size = 50 
-	v.its = 350 
-	ts = time.time()
-	v.n_classes = classesnum
-	v.st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d_%H:%M:%S')	
-	# Return predictions
-	return predict(v,X_train, X_test,y_test, model_name, model_num,fname)
-		
-
-#if __name__ == '__main__':
-#	main()
-
-
+    """Select model and launch prediction
+    """
+    max_feats = 2048
+    max_time = 20			
+    v = init_vars
+    v.n_hidden = 90
+    v.learning_rate = 0.001
+    v.lambda_loss_amount = 0.003
+    v.batch_size = 50 
+    v.its = 350 
+    ts = time.time()
+    v.n_classes = classesnum
+    v.st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d_%H:%M:%S')	
+    # Return predictions
+    return predict(v,X_train, X_test,y_test, model_name, model_num,fname)
 
