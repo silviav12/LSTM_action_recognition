@@ -8,3 +8,6 @@ Fine grained tennis action recognition using LSTM.
 3) Train the LSTM using features extracted in 2) and the 'learnExternalData' function in 'LSTM_hmdb_topredic_tosubmit.py'
 
 4) Make predictions using 'predictExternalData' from 'LSTM_hmdb_topredic_tosubmit.py'
+
+-----------
+Requires Tensorflow - https://www.tensorflow.org/install/
